@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Acurácia de Estoque — gobeaute</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --primary:#1A4F9C;--primary-dark:#0D2E6B;--primary-light:#E8EEFA;
+  --pink:#E91E8C;--pink-light:#FDE8F3;
+  --bg:#F0F4FA;--card:#FFFFFF;
+  --txt:#0D2E6B;--txt2:#5A6A8A;--txt3:#9BA8BE;
+  --ok:#22C55E;--ok-bg:#DCFCE7;
+  --bad:#EF4444;--bad-bg:#FEE2E2;
+  --warn:#F59E0B;--warn-bg:#FEF3C7;
+  --border:#DDE4F0;--border-lt:#EEF2F9;
+  --r:12px;--r-sm:8px;
+  --sh:0 1px 3px rgba(13,46,107,.08),0 4px 16px rgba(13,46,107,.04);
+  --sh2:0 4px 12px rgba(13,46,107,.12),0 8px 24px rgba(13,46,107,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,#0D2E6B 0%,#1A4F9C 55%,#2563C0 100%);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:62px;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(13,46,107,.25)}
+.logo{font-weight:700;font-size:21px;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+.logo .brand{display:inline-flex;align-items:baseline;gap:0;font-size:0}
+.logo .go{color:#fff;font-size:21px;font-weight:700;letter-spacing:-.5px}.logo .bt{color:var(--pink);font-size:21px;font-weight:700;letter-spacing:-.5px}
+.logo-sep{width:1px;height:22px;background:rgba(255,255,255,.2)}
+.logo-sub{color:rgba(255,255,255,.6);font-size:11px;font-weight:400;letter-spacing:.6px;text-transform:uppercase}
+.upd{color:rgba(255,255,255,.55);font-size:12px;display:flex;align-items:center;gap:6px}
+.upd::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* LAYOUT */
+.wrap{max-width:1440px;margin:0 auto;padding:22px 28px 40px}
+.sec{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--txt3);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border-lt)}
+
+/* FILTERS */
+.fbar{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;box-shadow:var(--sh)}
+.flbl{font-size:11px;font-weight:600;color:var(--txt2);white-space:nowrap}
+.fsep{width:1px;height:18px;background:var(--border)}
+select,input[type=text]{font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--txt);cursor:pointer;transition:border .15s,box-shadow .15s;height:32px}
+select:focus,input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,79,156,.12)}
+select:hover{border-color:var(--primary)}
+.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--border);cursor:pointer;transition:all .15s;height:32px;display:inline-flex;align-items:center;gap:5px}
+.btn-ghost{background:transparent;color:var(--txt2)}.btn-ghost:hover{background:var(--bg);color:var(--primary);border-color:var(--primary)}
+.btn-pink{background:var(--pink);color:#fff;border-color:var(--pink)}.btn-pink:hover{background:#C4157A}
+.fact{margin-left:auto;display:flex;gap:8px}
+
+/* KPIs — 6 colunas */
+.kgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:1200px){.kgrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kgrid{grid-template-columns:repeat(2,1fr)}.wrap{padding:14px}}
+.kcard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px 14px;box-shadow:var(--sh);transition:box-shadow .2s,transform .2s;position:relative;overflow:hidden}
+.kcard:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
+.kcard::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--primary);border-radius:3px 0 0 3px}
+.kcard.ok::before{background:var(--ok)}.kcard.warn::before{background:var(--warn)}.kcard.bad::before{background:var(--bad)}.kcard.pink::before{background:var(--pink)}
+.klbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2);margin-bottom:5px}
+.kval{font-size:24px;font-weight:700;color:var(--txt);line-height:1.1;letter-spacing:-.5px}
+.ksub{font-size:11px;color:var(--txt3);margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.b-ok{background:var(--ok-bg);color:#15803D}.b-warn{background:var(--warn-bg);color:#92400E}.b-bad{background:var(--bad-bg);color:#B91C1C}.b-pink{background:var(--pink-light);color:#9D1260}.b-blue{background:var(--primary-light);color:var(--primary-dark)}
+.kring{position:absolute;right:12px;top:12px;width:42px;height:42px}
+.rb{fill:none;stroke:var(--border-lt);stroke-width:4}.rf{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dasharray .8s ease}
+
+/* KPI separator line — divide bloco acurácia do match */
+.kgrid-sep{grid-column:1/-1;height:0;border-top:1px dashed var(--border);margin:2px 0}
+
+/* MATCH CONTÁBIL — card com tooltip */
+.kcard .ktip{position:absolute;bottom:8px;right:10px;font-size:9px;color:var(--txt3);cursor:help}
+
+/* CHART ROWS */
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+@media(max-width:900px){.crow{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.ctit{font-size:12px;font-weight:600;color:var(--txt);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--primary);flex-shrink:0}
+.cdot.pk{background:var(--pink)}
+
+/* BARS */
+.blist{display:flex;flex-direction:column;gap:8px}
+.bitem{display:flex;flex-direction:column;gap:3px}
+.bhdr{display:flex;justify-content:space-between;align-items:center}
+.bname{font-size:11px;font-weight:500;color:var(--txt)}
+.bval{font-size:11px;font-weight:700}
+.btrack{height:7px;background:var(--border-lt);border-radius:4px;overflow:visible;position:relative}
+.bfill{height:100%;border-radius:4px;transition:width .6s ease;position:relative}
+.bmeta{position:absolute;top:-2px;bottom:-2px;width:2px;background:rgba(239,68,68,.45)}
+
+/* CURVES */
+.cgrid{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;padding:6px 0}
+.citem{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:68px}
+.crwrap{position:relative;width:68px;height:68px}
+.crwrap svg{width:68px;height:68px}
+.crctr{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.crpct{font-size:13px;font-weight:700;color:var(--txt);line-height:1}
+.crlbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+/* TABLE */
+.ttbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.swrap{position:relative;flex:1;min-width:180px;max-width:300px}
+.swrap input{width:100%;padding-left:28px}
+.swrap::before{content:'⌕';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;opacity:.4;color:var(--txt)}
+.tscroll{overflow-x:auto}
+.dtbl{width:100%;border-collapse:collapse;font-size:12px}
+.dtbl thead th{padding:8px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);background:var(--bg);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+.dtbl thead th:hover{color:var(--primary)}
+.dtbl thead th::after{content:' ↕';opacity:.3;font-size:9px}
+.dtbl thead th.sa::after{content:' ↑';opacity:1;color:var(--primary)}.dtbl thead th.sd::after{content:' ↓';opacity:1;color:var(--primary)}
+.dtbl tbody tr{border-bottom:1px solid var(--border-lt);transition:background .1s}
+.dtbl tbody tr:hover{background:var(--primary-light)}
+.dtbl tbody td{padding:7px 10px;color:var(--txt)}
+.dtbl tbody td:first-child{font-weight:600;font-size:11px}
+.tipo-falta{background:var(--bad-bg);color:#B91C1C;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+.tipo-sobra{background:var(--warn-bg);color:#92400E;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+.tipo-ok{background:var(--ok-bg);color:#15803D;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+.tipo-fora{background:#F1F5F9;color:#64748B;font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;text-transform:uppercase}
+.a-ok{color:var(--ok);font-weight:700}.a-warn{color:var(--warn);font-weight:700}.a-bad{color:var(--bad);font-weight:700}
+.pgn{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px}
+.pinfo{font-size:11px;color:var(--txt2)}
+.pbtns{display:flex;gap:3px}
+.pbtn{font-family:'DM Sans',sans-serif;width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;font-size:11px;font-weight:500;color:var(--txt);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pbtn:hover,.pbtn.act{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pbtn:disabled{opacity:.35;cursor:default;pointer-events:none}
+
+/* HEATMAP */
+.hmtbl{width:100%;border-collapse:collapse;font-size:11px;min-width:560px}
+.hmtbl th{padding:6px 8px;font-size:10px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap}
+.hmtbl th:first-child{text-align:left}
+.hmtbl td{padding:4px 6px;text-align:center;border-bottom:1px solid var(--border-lt)}
+.hmtbl td:first-child{text-align:left;font-size:11px;font-weight:500;color:var(--txt);white-space:nowrap;padding:4px 10px}
+.hmc{border-radius:5px;padding:4px 6px;display:inline-block;min-width:48px;text-align:center;font-size:11px;font-weight:700}
+
+/* MATCH TABS */
+.mtabs{display:flex;gap:4px;margin-bottom:14px}
+.mtab{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--bg);color:var(--txt2);cursor:pointer;transition:all .15s}
+.mtab.act{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* MATCH FINANCEIRO — tabela resumo */
+.mftbl{width:100%;border-collapse:collapse;font-size:12px}
+.mftbl thead th{padding:7px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--txt2);background:var(--bg);border-bottom:1px solid var(--border);text-align:right}
+.mftbl thead th:first-child{text-align:left}
+.mftbl tbody tr{border-bottom:1px solid var(--border-lt);transition:background .1s}
+.mftbl tbody tr:hover{background:var(--primary-light)}
+.mftbl tbody td{padding:7px 10px;text-align:right;color:var(--txt)}
+.mftbl tbody td:first-child{text-align:left;font-weight:600}
+.mftbl tfoot td{padding:7px 10px;text-align:right;font-weight:700;border-top:2px solid var(--border);color:var(--txt)}
+.mftbl tfoot td:first-child{text-align:left}
+.match-ok{color:var(--ok);font-weight:700}
+.match-bad{color:var(--bad);font-weight:700}
+
+/* FOOTER */
+.ftr{text-align:center;padding:20px 0 8px;font-size:11px;color:var(--txt3);display:flex;align-items:center;justify-content:center;gap:6px}
+.ftr .go{color:var(--primary);font-weight:700}.ftr .bt{color:var(--pink);font-weight:700}
+
+/* TAB NAV */
+.tabnav{background:var(--primary-dark);padding:0 28px;display:flex;gap:4px;border-top:1px solid rgba(255,255,255,.1)}
+.tnav{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:10px 18px;border:none;background:transparent;color:rgba(255,255,255,.5);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.3px}
+.tnav:hover{color:rgba(255,255,255,.8)}
+.tnav.act{color:#fff;border-bottom-color:var(--pink)}
+
+/* TAG curva */
+.tcurva{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;background:var(--primary-light);color:var(--primary-dark);text-transform:uppercase;letter-spacing:.3px}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo">
+    <span class="brand"><span class="go">go</span><span class="bt">beaute</span></span>
+    <div class="logo-sep"></div>
+    <span class="logo-sub">Acurácia de Estoque</span>
+  </div>
+  <div class="upd" id="updLbl">Carregando...</div>
+</header>
+
+<nav class="tabnav">
+  <button class="tnav act" onclick="switchTab('acuracia')">Acurácia</button>
+  <button class="tnav" onclick="switchTab('historico')">Histórico Semanal</button>
+</nav>
+
+<div id="tabAcuracia">
+<div class="wrap">
+
+  <!-- FILTROS -->
+  <div class="sec">Filtros</div>
+  <div class="fbar">
+    <span class="flbl">Filial</span>
+    <select id="fF" onchange="af()"><option value="">Todas</option></select>
+    <div class="fsep"></div>
+    <span class="flbl">Marca</span>
+    <select id="fM" onchange="af()"><option value="">Todas</option></select>
+    <div class="fsep"></div>
+    <span class="flbl">Curva</span>
+    <select id="fC" onchange="af()">
+      <option value="">Todas</option>
+      <option>AA</option><option>A</option><option>B</option><option>C</option><option>N/A</option>
+    </select>
+    <div class="fsep"></div>
+    <span class="flbl">Tipo</span>
+    <select id="fT" onchange="af()">
+      <option value="">Todos</option>
+      <option value="falta">Falta Física</option>
+      <option value="sobra">Sobra Física</option>
+      <option value="ok">OK</option>
+      <option value="fora">Fora de escopo</option>
+    </select>
+    <div class="fact">
+      <button class="btn btn-ghost" onclick="cf()">Limpar</button>
+      <button class="btn btn-pink" onclick="expCSV()">⬇ CSV</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="sec">Indicadores Gerais</div>
+  <div class="kgrid" id="kgrid"></div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="sec">Acurácia por Dimensão</div>
+  <div class="crow">
+    <div class="card"><div class="ctit"><span class="cdot"></span>Por Filial</div><div class="blist" id="bFilial"></div></div>
+    <div class="card"><div class="ctit"><span class="cdot pk"></span>Por Curva ABC</div><div class="cgrid" id="curvas"></div></div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="crow">
+    <div class="card"><div class="ctit"><span class="cdot"></span>Por Marca</div><div class="blist" id="bMarca"></div></div>
+    <div class="card">
+      <div class="ctit"><span class="cdot pk"></span>Pareto — Top 20 por Divergência R$</div>
+      <div style="position:relative;height:250px"><canvas id="pareto" role="img" aria-label="Pareto top 20 SKUs por divergência financeira">Top 20 SKUs por valor de divergência.</canvas></div>
+    </div>
+  </div>
+
+  <!-- HEATMAP -->
+  <div class="sec">Heatmap — Filial × Curva</div>
+  <div class="card" style="margin-bottom:22px;overflow-x:auto">
+    <div class="ctit"><span class="cdot"></span>Acurácia (%) por Filial e Curva</div>
+    <div class="tscroll"><table class="hmtbl" id="hmap"></table></div>
+  </div>
+
+  <!-- MATCH CONTÁBIL -->
+  <div class="sec">Match Contábil</div>
+  <div class="card" style="margin-bottom:22px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="ctit" style="margin-bottom:0"><span class="cdot pk"></span>Análise de Match Contábil</div>
+      <div class="mtabs">
+        <button class="mtab act" id="tabQtd" onclick="switchMatch('qtd')">Quantitativo</button>
+        <button class="mtab" id="tabFin" onclick="switchMatch('fin')">Financeiro R$</button>
+      </div>
+    </div>
+    <div id="matchQtd"></div>
+    <div id="matchFin" style="display:none"></div>
+  </div>
+
+  <!-- TABELA -->
+  <div class="sec">Detalhamento por SKU</div>
+  <div class="card">
+    <div class="ttbar">
+      <div class="swrap"><input type="text" id="srch" placeholder="SKU, descrição, filial..." oninput="af()"></div>
+      <span style="font-size:11px;color:var(--txt2)" id="rcnt"></span>
+    </div>
+    <div class="tscroll">
+      <table class="dtbl" id="dtbl">
+        <thead><tr>
+          <th onclick="srt('sku')">SKU</th>
+          <th onclick="srt('descricao')">Descrição</th>
+          <th onclick="srt('filial')">Filial</th>
+          <th onclick="srt('marca')">Marca</th>
+          <th onclick="srt('curva')">Curva</th>
+          <th onclick="srt('estoque')">Estoque</th>
+          <th onclick="srt('falta')">Falta</th>
+          <th onclick="srt('sobra')">Sobra</th>
+          <th onclick="srt('valor_div')">Div. R$</th>
+          <th onclick="srt('status')">Status</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pgn">
+      <span class="pinfo" id="pinfo"></span>
+      <div class="pbtns" id="pbtns"></div>
+    </div>
+  </div>
+
+  <div class="ftr">
+    <span><span class="go" style="font-size:11px">go</span><span class="bt" style="font-size:11px">beaute</span></span>
+    • Acurácia de Estoque • Meta: <strong>95%</strong>
+  </div>
+</div><!-- /tabAcuracia -->
+
+<!-- ── ABA HISTÓRICO SEMANAL ── -->
+<div id="tabHistorico" style="display:none;max-width:1440px;margin:0 auto;padding:22px 28px 40px">
+
+  <div class="sec">Filtros</div>
+  <div class="fbar">
+    <span class="flbl">Mês</span>
+    <select id="hFiltroMes" onchange="filtrarHistorico()">
+      <option value="">Todos</option>
+      <option>Fevereiro</option>
+      <option>Março</option>
+      <option>Abril</option>
+      <option>Maio</option>
+      <option>Junho</option>
+    </select>
+    <div class="fsep"></div>
+    <span class="flbl">Semana</span>
+    <select id="hFiltroSem" onchange="renderHistorico()">
+      <option value="">Todas</option>
+    </select>
+    <div class="fact">
+      <button class="btn btn-ghost" onclick="limparFiltrosHistorico()">Limpar</button>
+    </div>
+  </div>
+
+  <div class="sec">Média do Período</div>
+  <div id="kgridHistorico" class="kgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px"></div>
+
+  <div class="sec">Evolução Semanal da Acurácia por Filial</div>
+  <div class="card" style="margin-bottom:22px">
+    <div class="ctit"><span class="cdot pk"></span>Acurácia (%) &nbsp;·&nbsp; Meta: 95%</div>
+    <div id="chartContainer" style="position:relative;height:380px">
+      <canvas id="chartHistorico"></canvas>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px"><span style="width:18px;height:3px;background:#1A4F9C;border-radius:2px;display:inline-block"></span>Beauty Hub ES</span>
+      <span style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px"><span style="width:18px;height:3px;background:#E91E8C;border-radius:2px;display:inline-block"></span>Beauty Hub RJ</span>
+      <span style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px"><span style="width:18px;height:3px;background:#F59E0B;border-radius:2px;display:inline-block"></span>Lescent ES</span>
+      <span style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px"><span style="width:28px;border-top:2px dashed #22C55E;display:inline-block"></span>Meta 95%</span>
+    </div>
+  </div>
+
+  <div class="sec">Dados por Semana</div>
+  <div class="card">
+    <div class="tscroll">
+      <table class="dtbl">
+        <thead><tr>
+          <th>Semana</th>
+          <th>Mês</th>
+          <th style="text-align:right">BH ES</th>
+          <th style="text-align:right">BH RJ</th>
+          <th style="text-align:right">Lescent ES</th>
+          <th style="text-align:right">Média</th>
+        </tr></thead>
+        <tbody id="tbodyHistorico"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ftr">
+    <span><span class="go" style="font-size:11px">go</span><span class="bt" style="font-size:11px">beaute</span></span>
+    &nbsp;•&nbsp; Histórico Semanal &nbsp;•&nbsp; Meta: <strong>95%</strong>
+    &nbsp;•&nbsp; <span style="color:var(--txt3);font-size:10px">build 2026-06-24-r5</span>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let ALL=[], FLT=[], SC='valor_div', SD='desc', PG=1;
+const PS=20, META=0.95;
+
+const FILIAIS_PERMITIDAS = new Set([
+  'Beauty Hub Varejo ES',
+  'Beauty Hub Varejo RJ',
+  'Lescent Varejo ES'
+]);
+
+const TBL_COLS = ['sku','descricao','filial','marca','curva','estoque','falta','sobra','valor_div','status'];
+
+// ── FILTERS ──
+function populateFilters(){
+  const fF=document.getElementById('fF');
+  const fM=document.getElementById('fM');
+  const selF=fF.value, selM=fM.value;
+  while(fF.options.length>1) fF.remove(1);
+  while(fM.options.length>1) fM.remove(1);
+  const filiais=[...new Set(ALL.map(r=>r.filial))].filter(Boolean).sort();
+  const marcas=[...new Set(ALL.map(r=>r.marca))].filter(Boolean).sort();
+  filiais.forEach(f=>{const o=document.createElement('option');o.value=o.text=f;fF.appendChild(o);});
+  marcas.forEach(m=>{const o=document.createElement('option');o.value=o.text=m;fM.appendChild(o);});
+  if(selF && filiais.includes(selF)) fF.value=selF;
+  if(selM && marcas.includes(selM)) fM.value=selM;
+}
+
+function af(){
+  const f=document.getElementById('fF').value;
+  const m=document.getElementById('fM').value;
+  const c=document.getElementById('fC').value;
+  const t=document.getElementById('fT').value;
+  const q=document.getElementById('srch').value.toLowerCase().trim();
+  FLT=ALL.filter(r=>{
+    if(f&&r.filial!==f)return false;
+    if(m&&r.marca!==m)return false;
+    if(c&&r.curva!==c)return false;
+    if(t==='falta'&&r.falta===0)return false;
+    if(t==='sobra'&&r.sobra===0)return false;
+    if(t==='ok'&&(r.falta>0||r.sobra>0))return false;
+    if(t==='fora'&&r.status!=='Fora de escopo')return false;
+    if(q&&!`${r.sku} ${r.descricao} ${r.filial} ${r.marca}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  srtData();PG=1;renderAll();
+}
+
+function cf(){
+  ['fF','fM','fC','fT'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('srch').value='';af();
+}
+
+function srt(col){
+  if(SC===col)SD=SD==='asc'?'desc':'asc';
+  else{SC=col;SD=col==='valor_div'||col==='falta'||col==='sobra'||col==='estoque'?'desc':'asc';}
+  document.querySelectorAll('.dtbl thead th').forEach(th=>{th.classList.remove('sa','sd')});
+  const idx=TBL_COLS.indexOf(col);
+  const ths=document.querySelectorAll('.dtbl thead th');
+  if(ths[idx])ths[idx].classList.add(SD==='asc'?'sa':'sd');
+  srtData();renderTbl();
+}
+
+function srtData(){
+  FLT.sort((a,b)=>{
+    let va=a[SC]??'',vb=b[SC]??'';
+    if(typeof va==='string')va=va.toLowerCase();
+    if(typeof vb==='string')vb=vb.toLowerCase();
+    return SD==='asc'?(va>vb?1:-1):(va<vb?1:-1);
+  });
+}
+
+function renderAll(){renderKPIs();renderBars('bFilial','filial');renderBars('bMarca','marca');renderCurvas();renderPareto();renderHeatmap();renderMatch();renderTbl();}
+
+// ── HELPERS ──
+function pc(v){return(v*100).toFixed(1)+'%'}
+function clr(v){return v>=META?'#22C55E':v>=.9?'#F59E0B':'#EF4444'}
+function cls(v){return v>=META?'ok':v>=.9?'warn':'bad'}
+function bTxt(v){return v>=META?'✓ Meta':v>=.9?'~ Atenção':'✕ Crítico'}
+function fmt(v){return v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function fmtR(v){return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+// ── KPIs ──
+// Acurácia por Unidade: (total_estoque - div_abs) / total_estoque
+// Acurácia por SKU: SKUs com div_abs == 0 / total_SKUs
+// Match Contábil Qtd: SKUs com div_abs == 0 / total_SKUs (igual Acurácia SKU, mas escopo contábil)
+// Match Contábil R$: valor em estoque de SKUs sem divergência / valor total em estoque
+function renderKPIs(){
+  const totU=FLT.reduce((s,r)=>s+r.estoque,0);
+  const divU=FLT.reduce((s,r)=>s+r.div_abs,0);
+  const aU=totU>0?1-divU/totU:0;
+
+  const totS=FLT.length;
+  const okS=FLT.filter(r=>r.div_abs===0).length;
+  const divS=totS-okS;
+  const aS=totS>0?okS/totS:0;
+
+  const divR=FLT.reduce((s,r)=>s+r.valor_div,0);
+
+  // Match Contábil Qtd = |Σ div_abs[falta]| - |Σ div_abs[sobra]| → divergência líquida em unidades
+  const totalFaltaUn=FLT.filter(r=>r.falta>0).reduce((s,r)=>s+r.div_abs,0);
+  const totalSobraUn=FLT.filter(r=>r.sobra>0).reduce((s,r)=>s+r.div_abs,0);
+  const mcQtdLiq=Math.abs(totalFaltaUn-totalSobraUn);
+
+  // Match Contábil R$ = |Σ |valor_div|[falta]| - |Σ |valor_div|[sobra]|| → divergência líquida monetária
+  const totalFaltaR=FLT.filter(r=>r.falta>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+  const totalSobraR=FLT.filter(r=>r.sobra>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+  const mcFinLiq=Math.abs(totalFaltaR-totalSobraR);
+
+  const CIRC=2*Math.PI*16;
+  const cards=[
+    {lbl:'Acurácia Un.',val:pc(aU),sub:`Meta ${(META*100).toFixed(0)}%`,pct:aU,col:clr(aU),cls:cls(aU),bdg:bTxt(aU)},
+    {lbl:'Acurácia SKU',val:pc(aS),sub:`${divS} SKUs c/ div.`,pct:aS,col:clr(aS),cls:cls(aS),bdg:bTxt(aS)},
+    {lbl:'SKUs Divergentes',val:divS.toLocaleString('pt-BR'),sub:`de ${totS.toLocaleString('pt-BR')}`,pct:null,cls:divS===0?'ok':divS<50?'warn':'bad',bdg:`${((divS/totS)*100).toFixed(1)}%`},
+    {lbl:'Valor Divergência',val:'R$ '+fmt(divR),sub:`${divS} SKUs`,pct:null,cls:'bad',bdg:divR>0?'⚠ Impacto':'✓ Zero'},
+    {lbl:'Match Contábil Un.',val:mcQtdLiq.toLocaleString('pt-BR')+' un',sub:`Falta ${totalFaltaUn.toLocaleString('pt-BR')} / Sobra ${totalSobraUn.toLocaleString('pt-BR')}`,pct:null,cls:mcQtdLiq===0?'ok':mcQtdLiq<500?'warn':'bad',bdg:mcQtdLiq===0?'✓ Zero':'⚠ Líquido',tip:'|Σ div_abs[falta]| − |Σ div_abs[sobra]|'},
+    {lbl:'Match Contábil R$',val:'R$ '+fmt(mcFinLiq),sub:`Falta R$ ${fmt(totalFaltaR)} / Sobra R$ ${fmt(totalSobraR)}`,pct:null,cls:mcFinLiq===0?'ok':mcFinLiq<5000?'warn':'bad',bdg:mcFinLiq===0?'✓ Zero':'⚠ Líquido',tip:'|Σ |valor_div|[falta]| − |Σ |valor_div|[sobra]|'},
+  ];
+  document.getElementById('kgrid').innerHTML=cards.map(c=>`
+    <div class="kcard ${c.cls}" title="${c.tip||''}">
+      ${c.pct!==null?`<svg class="kring" viewBox="0 0 44 44"><circle class="rb" cx="22" cy="22" r="16"/><circle class="rf" cx="22" cy="22" r="16" stroke="${c.col}" stroke-dasharray="${(c.pct*CIRC).toFixed(1)} ${CIRC}" transform="rotate(-90 22 22)"/></svg>`:''}
+      <div class="klbl">${c.lbl}</div>
+      <div class="kval">${c.val}</div>
+      <div class="ksub"><span class="bdg b-${c.cls==='pink'?'pink':c.cls}">${c.bdg}</span><span>${c.sub}</span></div>
+      ${c.tip?`<span class="ktip" title="${c.tip}">ⓘ</span>`:''}
+    </div>`).join('');
+}
+
+// ── BARS ──
+function renderBars(elId,field){
+  const map={};
+  FLT.forEach(r=>{
+    if(!map[r[field]])map[r[field]]={tot:0,div:0};
+    map[r[field]].tot+=r.estoque;map[r[field]].div+=r.div_abs;
+  });
+  const items=Object.entries(map).map(([n,v])=>({name:n,pct:v.tot>0?1-v.div/v.tot:0})).sort((a,b)=>a.pct-b.pct);
+  document.getElementById(elId).innerHTML=items.map(it=>{
+    const w=(it.pct*100).toFixed(1);
+    const c=clr(it.pct);
+    return `<div class="bitem">
+      <div class="bhdr"><span class="bname">${it.name}</span><span class="bval" style="color:${c}">${w}%</span></div>
+      <div class="btrack">
+        <div class="bfill" style="width:${w}%;background:${c}"></div>
+        <div class="bmeta" style="left:${META*100}%"></div>
+      </div></div>`;
+  }).join('');
+}
+
+// ── CURVAS ──
+function renderCurvas(){
+  const ord=['AA','A','B','C','N/A'];
+  const cols={AA:'#E91E8C',A:'#1A4F9C',B:'#F59E0B',C:'#6366F1','N/A':'#9BA8BE'};
+  const map={};
+  FLT.forEach(r=>{if(!map[r.curva])map[r.curva]={tot:0,div:0};map[r.curva].tot+=r.estoque;map[r.curva].div+=r.div_abs;});
+  const R=27,CX=34,CY=34,CIRC=2*Math.PI*R;
+  document.getElementById('curvas').innerHTML=ord.map(cv=>{
+    const v=map[cv];if(!v)return'';
+    const pct=v.tot>0?1-v.div/v.tot:0;
+    const c=cols[cv]||'#9BA8BE';
+    return `<div class="citem">
+      <div class="crwrap"><svg viewBox="0 0 68 68">
+        <circle fill="none" stroke="#EEF2F9" stroke-width="6" cx="${CX}" cy="${CY}" r="${R}"/>
+        <circle fill="none" stroke="${c}" stroke-width="6" stroke-linecap="round"
+          stroke-dasharray="${(pct*CIRC).toFixed(1)} ${CIRC}" transform="rotate(-90 ${CX} ${CY})"
+          cx="${CX}" cy="${CY}" r="${R}"/>
+      </svg>
+      <div class="crctr"><div class="crpct">${(pct*100).toFixed(0)}%</div></div></div>
+      <div class="crlbl" style="color:${c}">${cv}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── PARETO ──
+let pChart=null;
+function renderPareto(){
+  if(typeof Chart==='undefined'){return;}
+  const top=([...FLT]).filter(r=>r.valor_div>0).sort((a,b)=>b.valor_div-a.valor_div).slice(0,20);
+  if(!top.length){document.getElementById('pareto').parentElement.innerHTML='<p style="color:var(--txt3);font-size:12px;padding:20px;text-align:center">Sem divergências financeiras no filtro selecionado</p>';return;}
+  const labels=top.map(r=>r.sku);
+  const vals=top.map(r=>r.valor_div);
+  const total=vals.reduce((s,v)=>s+v,0);
+  let acc=0;
+  const cum=vals.map(v=>{acc+=v;return+(acc/total*100).toFixed(1)});
+  if(pChart){pChart.destroy();pChart=null;}
+  pChart=new Chart(document.getElementById('pareto'),{
+    data:{labels,datasets:[
+      {type:'bar',label:'Div. R$',data:vals,backgroundColor:'#1A4F9C',borderRadius:3,yAxisID:'y',order:2},
+      {type:'line',label:'% Acum.',data:cum,borderColor:'#E91E8C',backgroundColor:'rgba(233,30,140,.07)',borderWidth:2,pointRadius:2,fill:true,tension:.3,yAxisID:'y2',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>ctx.datasetIndex===0?'R$ '+fmt(ctx.raw):ctx.raw+'% acum.'}}},
+      scales:{
+        x:{ticks:{font:{size:9},maxRotation:45},grid:{display:false}},
+        y:{ticks:{callback:v=>'R$'+fmt(v/1000)+'k',font:{size:9}},grid:{color:'#EEF2F9'}},
+        y2:{position:'right',min:0,max:100,ticks:{callback:v=>v+'%',font:{size:9}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+// ── HEATMAP ──
+function renderHeatmap(){
+  const filiais=[...new Set(FLT.map(r=>r.filial))].sort();
+  const curvas=['AA','A','B','C','N/A'];
+  const map={};
+  FLT.forEach(r=>{const k=`${r.filial}||${r.curva}`;if(!map[k])map[k]={tot:0,div:0};map[k].tot+=r.estoque;map[k].div+=r.div_abs;});
+  function hc(p){if(p===null)return'#F8FAFC';if(p>=.98)return'#bbf7d0';if(p>=META)return'#dcfce7';if(p>=.9)return'#fef3c7';if(p>=.7)return'#fed7aa';return'#fecaca';}
+  function ht(p){if(p===null)return'#9BA8BE';if(p>=.9)return'#14532d';if(p>=.7)return'#78350f';return'#7f1d1d';}
+  const thead=`<tr><th>Filial</th>${curvas.map(c=>`<th>${c}</th>`).join('')}<th>Geral</th></tr>`;
+  const rows=filiais.map(f=>{
+    const cells=curvas.map(cv=>{
+      const v=map[`${f}||${cv}`];
+      if(!v)return`<td><span class="hmc" style="background:#F8FAFC;color:#9BA8BE;font-weight:400">—</span></td>`;
+      const p=v.tot>0?1-v.div/v.tot:1;
+      return`<td><span class="hmc" style="background:${hc(p)};color:${ht(p)}">${(p*100).toFixed(0)}%</span></td>`;
+    });
+    const sub=FLT.filter(r=>r.filial===f);
+    const tU=sub.reduce((s,r)=>s+r.estoque,0),dU=sub.reduce((s,r)=>s+r.div_abs,0);
+    const g=tU>0?1-dU/tU:1;
+    cells.push(`<td><span class="hmc" style="background:${hc(g)};color:${ht(g)};font-weight:700">${(g*100).toFixed(0)}%</span></td>`);
+    return`<tr><td>${f}</td>${cells.join('')}</tr>`;
+  });
+  document.getElementById('hmap').innerHTML=`<thead>${thead}</thead><tbody>${rows.join('')}</tbody>`;
+}
+
+// ── MATCH CONTÁBIL ──
+let matchMode='qtd';
+function switchMatch(mode){
+  matchMode=mode;
+  document.getElementById('tabQtd').classList.toggle('act',mode==='qtd');
+  document.getElementById('tabFin').classList.toggle('act',mode==='fin');
+  document.getElementById('matchQtd').style.display=mode==='qtd'?'':'none';
+  document.getElementById('matchFin').style.display=mode==='fin'?'':'none';
+}
+
+function renderMatch(){
+  renderMatchQtd();
+  renderMatchFin();
+}
+
+function renderMatchQtd(){
+  // Match Quantitativo por filial: |Σ div_abs[falta]| - |Σ div_abs[sobra]| = divergência líquida em unidades
+  const filiais=[...new Set(FLT.map(r=>r.filial))].sort();
+  const rows=filiais.map(f=>{
+    const sub=FLT.filter(r=>r.filial===f);
+    const faltaUn=sub.filter(r=>r.falta>0).reduce((s,r)=>s+r.div_abs,0);
+    const sobraUn=sub.filter(r=>r.sobra>0).reduce((s,r)=>s+r.div_abs,0);
+    const liq=Math.abs(faltaUn-sobraUn);
+    return {f,faltaUn,sobraUn,liq};
+  });
+  const faltaAll=FLT.filter(r=>r.falta>0).reduce((s,r)=>s+r.div_abs,0);
+  const sobraAll=FLT.filter(r=>r.sobra>0).reduce((s,r)=>s+r.div_abs,0);
+  const liqAll=Math.abs(faltaAll-sobraAll);
+
+  const clrLiq=v=>v===0?'#22C55E':v<500?'#F59E0B':'#EF4444';
+  const thead=`<tr>
+    <th style="text-align:left">Filial</th>
+    <th>Falta (un)</th>
+    <th>Sobra (un)</th>
+    <th>Líquido (un)</th>
+  </tr>`;
+  const tbody=rows.map(r=>`<tr>
+    <td>${r.f}</td>
+    <td class="match-bad">${r.faltaUn.toLocaleString('pt-BR')}</td>
+    <td style="color:var(--warn);font-weight:700">${r.sobraUn.toLocaleString('pt-BR')}</td>
+    <td><span style="font-weight:700;color:${clrLiq(r.liq)}">${r.liq.toLocaleString('pt-BR')}</span></td>
+  </tr>`).join('');
+  const tfoot=`<tr>
+    <td>Total Geral</td>
+    <td class="match-bad">${faltaAll.toLocaleString('pt-BR')}</td>
+    <td style="color:var(--warn);font-weight:700">${sobraAll.toLocaleString('pt-BR')}</td>
+    <td><span style="font-weight:700;color:${clrLiq(liqAll)}">${liqAll.toLocaleString('pt-BR')}</span></td>
+  </tr>`;
+  document.getElementById('matchQtd').innerHTML=`
+    <div class="tscroll">
+      <table class="mftbl">
+        <thead>${thead}</thead>
+        <tbody>${tbody}</tbody>
+        <tfoot>${tfoot}</tfoot>
+      </table>
+    </div>
+    <p style="font-size:10px;color:var(--txt3);margin-top:8px">Líquido = |Falta| − |Sobra| em unidades absolutas por filial</p>`;
+}
+
+function renderMatchFin(){
+  // Match Financeiro por filial: |Σ |valor_div|[falta]| - |Σ |valor_div|[sobra]| = divergência líquida R$
+  const filiais=[...new Set(FLT.map(r=>r.filial))].sort();
+  const rows=filiais.map(f=>{
+    const sub=FLT.filter(r=>r.filial===f);
+    const faltaR=sub.filter(r=>r.falta>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+    const sobraR=sub.filter(r=>r.sobra>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+    const liq=Math.abs(faltaR-sobraR);
+    return {f,faltaR,sobraR,liq};
+  });
+  const faltaAll=FLT.filter(r=>r.falta>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+  const sobraAll=FLT.filter(r=>r.sobra>0).reduce((s,r)=>s+Math.abs(r.valor_div),0);
+  const liqAll=Math.abs(faltaAll-sobraAll);
+
+  const clrLiq=v=>v===0?'#22C55E':v<5000?'#F59E0B':'#EF4444';
+  const thead=`<tr>
+    <th style="text-align:left">Filial</th>
+    <th>Falta (R$)</th>
+    <th>Sobra (R$)</th>
+    <th>Líquido (R$)</th>
+  </tr>`;
+  const tbody=rows.map(r=>`<tr>
+    <td>${r.f}</td>
+    <td class="match-bad">${fmtR(r.faltaR)}</td>
+    <td style="color:var(--warn);font-weight:700">${fmtR(r.sobraR)}</td>
+    <td><span style="font-weight:700;color:${clrLiq(r.liq)}">${fmtR(r.liq)}</span></td>
+  </tr>`).join('');
+  const tfoot=`<tr>
+    <td>Total Geral</td>
+    <td class="match-bad">${fmtR(faltaAll)}</td>
+    <td style="color:var(--warn);font-weight:700">${fmtR(sobraAll)}</td>
+    <td><span style="font-weight:700;color:${clrLiq(liqAll)}">${fmtR(liqAll)}</span></td>
+  </tr>`;
+  document.getElementById('matchFin').innerHTML=`
+    <div class="tscroll">
+      <table class="mftbl">
+        <thead>${thead}</thead>
+        <tbody>${tbody}</tbody>
+        <tfoot>${tfoot}</tfoot>
+      </table>
+    </div>
+    <p style="font-size:10px;color:var(--txt3);margin-top:8px">Líquido = |Falta R$| − |Sobra R$| com valores absolutos de divergência por filial</p>`;
+}
+
+// ── TABLE ──
+function renderTbl(){
+  const st=(PG-1)*PS, ed=Math.min(PG*PS,FLT.length);
+  const pg=FLT.slice(st,ed);
+  document.getElementById('rcnt').textContent=`${FLT.length.toLocaleString('pt-BR')} registros`;
+  document.getElementById('tbody').innerHTML=pg.map(r=>{
+    const tp=r.falta>0?'<span class="tipo-falta">Falta</span>':r.sobra>0?'<span class="tipo-sobra">Sobra</span>':r.status==='Fora de escopo'?'<span class="tipo-fora">Fora</span>':'<span class="tipo-ok">OK</span>';
+    const dv=r.valor_div>0?`<span style="color:var(--bad);font-weight:600">R$ ${r.valor_div.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>`:'<span style="color:var(--ok)">—</span>';
+    return`<tr>
+      <td>${r.sku}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.descricao}">${r.descricao}</td>
+      <td style="font-size:11px">${r.filial}</td>
+      <td style="font-size:11px">${r.marca}</td>
+      <td><span class="tcurva">${r.curva}</span></td>
+      <td style="text-align:right">${r.estoque.toLocaleString('pt-BR')}</td>
+      <td style="text-align:right;color:var(--bad)">${r.falta>0?r.falta.toLocaleString('pt-BR'):'—'}</td>
+      <td style="text-align:right;color:var(--warn)">${r.sobra>0?r.sobra.toLocaleString('pt-BR'):'—'}</td>
+      <td style="text-align:right">${dv}</td>
+      <td>${tp}</td>
+    </tr>`;
+  }).join('');
+  renderPgn();
+}
+
+function renderPgn(){
+  const tot=Math.ceil(FLT.length/PS);
+  const s=(PG-1)*PS+1,e=Math.min(PG*PS,FLT.length);
+  document.getElementById('pinfo').textContent=`${s}–${e} de ${FLT.length.toLocaleString('pt-BR')}`;
+  const b=[];
+  b.push(`<button class="pbtn" onclick="gp(${PG-1})" ${PG===1?'disabled':''}>‹</button>`);
+  const rng=[];
+  for(let p=1;p<=tot;p++){if(p===1||p===tot||(p>=PG-1&&p<=PG+1))rng.push(p);else if(rng[rng.length-1]!=='…')rng.push('…');}
+  rng.forEach(p=>{
+    if(p==='…')b.push(`<span class="pbtn" style="cursor:default">…</span>`);
+    else b.push(`<button class="pbtn ${p===PG?'act':''}" onclick="gp(${p})">${p}</button>`);
+  });
+  b.push(`<button class="pbtn" onclick="gp(${PG+1})" ${PG===tot||tot===0?'disabled':''}>›</button>`);
+  document.getElementById('pbtns').innerHTML=b.join('');
+}
+
+function gp(p){
+  const tot=Math.ceil(FLT.length/PS);
+  if(p<1||p>tot)return;PG=p;renderTbl();
+  window.scrollTo({top:document.querySelector('.dtbl').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
+}
+
+// ── EXPORT CSV ──
+function expCSV(){
+  const H=['SKU','Descrição','Filial','Marca','Curva','Estoque','Falta','Sobra','Div R$','Status'];
+  const rows=[H.join(';')];
+  FLT.forEach(r=>rows.push([r.sku,r.descricao,r.filial,r.marca,r.curva,r.estoque,r.falta,r.sobra,r.valor_div,r.status].join(';')));
+  const b=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`acuracia_gobeaute_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+
+// INIT
+(async function init() {
+  try {
+    document.getElementById('updLbl').textContent = 'Carregando...';
+    const res = await fetch('/api/data');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Erro desconhecido');
+
+    const rawRows = data.rows || [];
+    ALL = rawRows.filter(r => FILIAIS_PERMITIDAS.has(r.filial));
+
+    const upd = data.updated_at
+      ? 'Apuração: ' + new Date(data.updated_at).toLocaleDateString('pt-BR')
+      : '—';
+    document.getElementById('updLbl').textContent = ALL.length > 0
+      ? upd
+      : 'Sem dados. Rode o ingest no n8n.';
+
+    populateFilters();
+  } catch(e) {
+    document.getElementById('updLbl').textContent = 'Erro ao carregar: ' + e.message;
+    ALL = [];
+  }
+  try { af(); } catch(e) { if(window.console) console.error('[init] af() erro:', e); }
+})();
+</script>
+
+<script>
+var HISTORICO = [
+  {sem:'Semana 8',  mes:'Fevereiro', es:86, rj:87, lc:85},
+  {sem:'Semana 9',  mes:'Fevereiro', es:78, rj:92, lc:83},
+  {sem:'Semana 10', mes:'Março',     es:75, rj:92, lc:82},
+  {sem:'Semana 11', mes:'Março',     es:69, rj:90, lc:91},
+  {sem:'Semana 12', mes:'Março',     es:79, rj:95, lc:85},
+  {sem:'Semana 13', mes:'Março',     es:77, rj:91, lc:92},
+  {sem:'Semana 14', mes:'Março',     es:62, rj:88, lc:76},
+  {sem:'Semana 15', mes:'Abril',     es:51, rj:89, lc:75},
+  {sem:'Semana 16', mes:'Abril',     es:69, rj:85, lc:83},
+  {sem:'Semana 17', mes:'Abril',     es:65, rj:90, lc:80},
+  {sem:'Semana 18', mes:'Abril',     es:68, rj:82, lc:90},
+  {sem:'Semana 19', mes:'Maio',      es:51, rj:60, lc:62},
+  {sem:'Semana 20', mes:'Maio',      es:53, rj:77, lc:70},
+  {sem:'Semana 21', mes:'Maio',      es:51, rj:73, lc:67},
+  {sem:'Semana 22', mes:'Maio',      es:93, rj:93, lc:93},
+  {sem:'Semana 23', mes:'Junho',     es:80, rj:95, lc:92},
+  {sem:'Semana 24', mes:'Junho',     es:73, rj:89, lc:83},
+  {sem:'Semana 25', mes:'Junho',     es:77, rj:88, lc:61},
+  {sem:'Semana 26', mes:'Junho',     es:88, rj:86, lc:61}
+];
+var SEMANA_ATUAL = 'Semana 26';
+
+function getDadosFiltrados(){
+  var mes = document.getElementById('hFiltroMes') ? document.getElementById('hFiltroMes').value : '';
+  var sem = document.getElementById('hFiltroSem') ? document.getElementById('hFiltroSem').value : '';
+  return HISTORICO.filter(function(h){
+    if(mes && h.mes !== mes) return false;
+    if(sem && h.sem !== sem) return false;
+    return true;
+  });
+}
+
+function filtrarHistorico(){
+  var mes = document.getElementById('hFiltroMes').value;
+  var semSel = document.getElementById('hFiltroSem');
+  var prevSem = semSel.value;
+  var pool = mes ? HISTORICO.filter(function(h){return h.mes===mes;}) : HISTORICO;
+  semSel.innerHTML = '<option value="">Todas</option>';
+  pool.forEach(function(h){
+    var o = document.createElement('option');
+    o.value = h.sem; o.text = h.sem; semSel.appendChild(o);
+  });
+  if(prevSem && pool.find(function(h){return h.sem===prevSem;})) semSel.value = prevSem;
+  renderHistorico();
+}
+
+function limparFiltrosHistorico(){
+  var m = document.getElementById('hFiltroMes');
+  var s = document.getElementById('hFiltroSem');
+  if(m) m.value = '';
+  if(s){
+    s.innerHTML = '<option value="">Todas</option>';
+    HISTORICO.forEach(function(h){
+      var o=document.createElement('option'); o.value=h.sem; o.text=h.sem; s.appendChild(o);
+    });
+  }
+  renderHistorico();
+}
+
+function renderKPIsHistorico(data){
+  var kg = document.getElementById('kgridHistorico');
+  if(!kg) return;
+  if(!data.length){kg.innerHTML='<p style="color:var(--txt3);font-size:12px;padding:8px;grid-column:1/-1">Sem dados no período.</p>';return;}
+  var esAvg=Math.round(data.reduce(function(s,h){return s+h.es;},0)/data.length*10)/10;
+  var rjAvg=Math.round(data.reduce(function(s,h){return s+h.rj;},0)/data.length*10)/10;
+  var lcAvg=Math.round(data.reduce(function(s,h){return s+h.lc;},0)/data.length*10)/10;
+  var CIRC=2*Math.PI*16;
+  function kcard(lbl,val){
+    var pct=val/100;
+    var clrK=val>=95?'#22C55E':val>=80?'#F59E0B':'#EF4444';
+    var clsK=val>=95?'ok':val>=80?'warn':'bad';
+    var bdgT=val>=95?'+ Meta':val>=80?'~ Atenção':'! Crítico';
+    return '<div class="kcard '+clsK+'">'+
+      '<svg class="kring" viewBox="0 0 44 44"><circle class="rb" cx="22" cy="22" r="16"/>'+
+      '<circle class="rf" cx="22" cy="22" r="16" stroke="'+clrK+'" stroke-dasharray="'+(pct*CIRC).toFixed(1)+' '+CIRC+'" transform="rotate(-90 22 22)"/></svg>'+
+      '<div class="klbl">'+lbl+'</div>'+
+      '<div class="kval">'+val+'%</div>'+
+      '<div class="ksub"><span class="bdg b-'+clsK+'">'+bdgT+'</span><span>média '+data.length+' sem.</span></div>'+
+    '</div>';
+  }
+  kg.innerHTML=kcard('Beauty Hub ES',esAvg)+kcard('Beauty Hub RJ',rjAvg)+kcard('Lescent ES',lcAvg);
+}
+
+function renderHistorico(){
+  try{
+    var tbody=document.getElementById('tbodyHistorico');
+    if(!tbody) return;
+    var data=getDadosFiltrados();
+    renderKPIsHistorico(data);
+
+    // 1) TABELA SEMPRE PRIMEIRO (independe do Chart)
+    if(!data.length){
+      tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--txt3);padding:16px">Sem dados para o filtro.</td></tr>';
+    } else {
+      var clrP=function(v){return v>=95?'var(--ok)':v>=80?'var(--warn)':'var(--bad)';};
+      var cell=function(v){return '<td style="text-align:right;color:'+clrP(v)+';font-weight:700">'+v+'%</td>';};
+      var thtml='';
+      for(var i=0;i<data.length;i++){
+        var h=data[i];
+        var isAtual=(h.sem===SEMANA_ATUAL);
+        var media=Math.round((h.es+h.rj+h.lc)/3*10)/10;
+        var rowBg=isAtual?'background:var(--primary-light);':'';
+        var badge=isAtual?' <span class="bdg b-blue" style="font-size:9px;padding:1px 5px">atual</span>':'';
+        thtml+='<tr style="'+rowBg+'">';
+        thtml+='<td style="font-weight:'+(isAtual?'700':'400')+'">'+h.sem+badge+'</td>';
+        thtml+='<td style="font-size:11px;color:var(--txt2)">'+h.mes+'</td>';
+        thtml+=cell(h.es)+cell(h.rj)+cell(h.lc)+cell(media);
+        thtml+='</tr>';
+      }
+      tbody.innerHTML=thtml;
+    }
+
+    // 2) GRÁFICO POR ÚLTIMO E PROTEGIDO (se Chart falhar, tabela continua visível)
+    var container=document.getElementById('chartContainer');
+    if(!container) return;
+    if(typeof Chart==='undefined'){
+      container.innerHTML='<p style="color:var(--txt3);font-size:12px;padding:20px;text-align:center">Gráfico indisponível (Chart.js não carregou). A tabela abaixo mostra os dados.</p>';
+      return;
+    }
+    if(!data.length){
+      container.innerHTML='<p style="color:var(--txt3);font-size:12px;padding:20px;text-align:center">Sem dados para o filtro.</p>';
+      return;
+    }
+    // Destruir instância anterior e recriar canvas limpo
+    try{ if(Chart.getChart){var old=Chart.getChart('chartHistorico'); if(old) old.destroy();} }catch(e){}
+    container.innerHTML='<canvas id="chartHistorico"></canvas>';
+    var canvas=document.getElementById('chartHistorico');
+    var labels=[],esD=[],rjD=[],lcD=[],metaD=[];
+    for(var j=0;j<data.length;j++){labels.push(data[j].sem);esD.push(data[j].es);rjD.push(data[j].rj);lcD.push(data[j].lc);metaD.push(95);}
+    try{
+      new Chart(canvas,{
+        type:'line',
+        data:{labels:labels,datasets:[
+          {label:'Beauty Hub ES',data:esD,borderColor:'#1A4F9C',backgroundColor:'rgba(26,79,156,.08)',borderWidth:2.5,pointRadius:4,pointHoverRadius:7,tension:.3,fill:false},
+          {label:'Beauty Hub RJ',data:rjD,borderColor:'#E91E8C',backgroundColor:'rgba(233,30,140,.08)',borderWidth:2.5,pointRadius:4,pointHoverRadius:7,tension:.3,fill:false},
+          {label:'Lescent ES',data:lcD,borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.08)',borderWidth:2.5,pointRadius:4,pointHoverRadius:7,tension:.3,fill:false},
+          {label:'Meta 95%',data:metaD,borderColor:'#22C55E',backgroundColor:'transparent',borderWidth:1.5,borderDash:[6,4],pointRadius:0,tension:0,fill:false}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){
+            if(ctx.dataset.label==='Meta 95%') return 'Meta: 95%';
+            return ctx.dataset.label+': '+(ctx.raw!==null?ctx.raw+'%':'-');
+          }}}},
+          scales:{
+            x:{ticks:{font:{size:10},maxRotation:45,minRotation:45},grid:{color:'#EEF2F9'}},
+            y:{min:40,max:100,ticks:{callback:function(v){return v+'%';},font:{size:11},stepSize:10},grid:{color:'#EEF2F9'}}
+          }
+        }
+      });
+    }catch(err){
+      container.innerHTML='<p style="color:var(--txt3);font-size:12px;padding:20px;text-align:center">Não foi possível desenhar o gráfico ('+err.message+'). Dados na tabela abaixo.</p>';
+    }
+  }catch(e){
+    if(window.console) console.error('[historico] erro:', e);
+  }
+}
+
+function switchTab(tab){
+  var elAc=document.getElementById('tabAcuracia');
+  var elHi=document.getElementById('tabHistorico');
+  if(elAc) elAc.style.display=(tab==='acuracia')?'block':'none';
+  if(elHi) elHi.style.display=(tab==='historico')?'block':'none';
+  document.querySelectorAll('.tnav').forEach(function(b){b.classList.remove('act');});
+  var sel=document.querySelector('.tnav[onclick*="'+tab+'"]');
+  if(sel) sel.classList.add('act');
+  if(tab==='historico'){
+    var semSel=document.getElementById('hFiltroSem');
+    if(semSel && semSel.options.length===1){
+      HISTORICO.forEach(function(h){var o=document.createElement('option');o.value=h.sem;o.text=h.sem;semSel.appendChild(o);});
+    }
+    requestAnimationFrame(function(){requestAnimationFrame(renderHistorico);});
+  }
+}
+if(window.console) console.log('[gobeaute] build 2026-06-24-r5 carregado OK');
+</script>
+
+</body>
+</html>
