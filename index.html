@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Acurácia de Estoque — ERP × WMS</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    margin-bottom: 32px;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(88,166,255,0.15);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+    margin-bottom: 24px;
+  }
+  section {
+    margin-bottom: 32px;
+  }
+  h2 {
+    font-size: 18px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  code {
+    background: rgba(110,118,129,0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .stack span {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .cta {
+    display: inline-block;
+    background: var(--accent);
+    color: #0d1117;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
 
+  <div class="badge">Em produção</div>
+  <h1>📊 Dashboard de Acurácia de Estoque — ERP × WMS</h1>
+  <p class="subtitle">Sistema de monitoramento de acurácia de inventário, comparando saldos entre ERP e WMS em tempo real, com alertas automáticos de divergência.</p>
+
+  <section>
+    <h2>Problema resolvido</h2>
+    <div class="card">
+      <p>Operações de estoque multi-filial sofrem com divergências entre sistemas (ERP vs. WMS) que geram rupturas não identificadas, erros de faturamento por saldo incorreto e retrabalho manual de conferência.</p>
+      <p>Este projeto automatiza a detecção, quantificação e visualização dessas divergências.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Em funcionamento</h2>
+    <div class="card">
+      <p>Dashboard ativo, monitorando acurácia de estoque entre múltiplas filiais e marcas, com meta definida de <strong>95% de acurácia</strong>. Acompanha indicadores gerais, evolução semanal por filial, Pareto de divergência financeira e detalhamento por SKU.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <div class="card">
+      <p><strong>Pipeline:</strong> n8n (orquestração) → Cloudflare Worker (API + storage) → Dashboard (HTML/JS/Chart.js)</p>
+      <ul>
+        <li><strong>23h35</strong> — extrai saldo ERP (Protheus) via Metabase, agrega quantidades disponível + reservada + empenhada</li>
+        <li><strong>09h00 (dia seguinte)</strong> — extrai saldo WMS via XLSX no Drive, cruza com o ERP da véspera</li>
+        <li>Classifica cada SKU por curva ABC e calcula divergência absoluta</li>
+        <li>Dispara alerta no Google Chat quando a divergência ultrapassa o limiar por curva</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Destaques técnicos</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Chunking de payload:</strong> contorna o limite de ~1MB por linha do D1 (SQLite/Cloudflare), dividindo a ingestão em chunks de 900KB</li>
+        <li><strong>Normalização defensiva:</strong> aceita múltiplas variações de nome de coluna entre fontes diferentes</li>
+        <li><strong>Cálculo de acurácia</strong> em duas dimensões: por unidade e por SKU</li>
+        <li><strong>Match contábil líquido</strong> para identificar se a divergência é estrutural ou de timing</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stack</h2>
+    <div class="stack">
+      <span>TypeScript</span>
+      <span>Cloudflare Workers</span>
+      <span>SQLite (D1)</span>
+      <span>Chart.js</span>
+      <span>n8n</span>
+      <span>Google Sheets/Drive API</span>
+      <span>Metabase API</span>
+    </div>
+  </section>
+
+  <section>
+    <a class="cta" href="https://github.com/SamuelReboucas/acuracia-estoque">Ver código-fonte no GitHub →</a>
+  </section>
+
+</div>
+</body>
+</html>
