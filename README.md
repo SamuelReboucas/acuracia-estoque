@@ -1,8 +1,8 @@
-# 📊 Dashboard de Acurácia de Estoque — ERP × WMS
+# Dashboard de Acurácia de Estoque — ERP × WMS
 
 Sistema de monitoramento de acurácia de inventário construído para operação de e-commerce/varejo, comparando saldos entre ERP (Protheus) e WMS em tempo real, com alertas automáticos de divergência.
 
-## 🎯 Problema resolvido
+## Problema resolvido
 
 Operações de estoque multi-filial sofrem com **divergências entre sistemas** (ERP vs. WMS) que geram:
 - Rupturas não identificadas
@@ -11,7 +11,7 @@ Operações de estoque multi-filial sofrem com **divergências entre sistemas** 
 
 Este projeto automatiza a detecção, quantificação e visualização dessas divergências.
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ```
 n8n (orquestração)  →  Cloudflare Worker (API + storage)  →  Dashboard (HTML/JS/Chart.js)
@@ -28,14 +28,14 @@ n8n (orquestração)  →  Cloudflare Worker (API + storage)  →  Dashboard (HT
   - `GET /api/health` — healthcheck
 - **`public/index.html`** — dashboard front-end: KPIs de acurácia, Pareto de divergências financeiras, heatmap Filial × Curva ABC, match contábil (quantitativo e financeiro), tabela detalhada por SKU com paginação e exportação CSV.
 
-## ⚙️ Detalhes técnicos relevantes
+## Detalhes técnicos relevantes
 
 - **Chunking de payload**: como o D1 (SQLite do Cloudflare) tem limite de ~1MB por linha, o payload de ingestão é dividido em chunks de 900KB e remontado na leitura — resolve `SQLITE_TOOBIG` em bases de estoque com dezenas de milhares de SKUs.
 - **Normalização defensiva**: `normalizeRow()` aceita múltiplas variações de nome de coluna (ex: `SALDO PROTHEUS`, `Saldo ERP`, `saldo_protheus`) para tolerar mudanças de schema na fonte.
 - **Cálculo de acurácia** em duas dimensões: por unidade (`1 - divergência_absoluta/estoque_total`) e por SKU (`SKUs sem divergência / total SKUs`).
 - **Match contábil líquido**: `|Σ falta| - |Σ sobra|`, tanto em unidades quanto em R$, para identificar se a divergência é estrutural ou apenas de timing.
 
-## 🔄 Pipeline de dados (n8n)
+## Pipeline de dados (n8n)
 
 Dois workflows agendados alimentam este Worker via `/api/ingest`:
 1. **23h35** — extrai saldo ERP do Metabase, agrega quantidades (disponível + reservada + empenhada)
@@ -43,10 +43,10 @@ Dois workflows agendados alimentam este Worker via `/api/ingest`:
 
 > Os workflows n8n completos (JSON exportável) estão no repositório [`n8n-workflows-estoque`](#).
 
-## 🚀 Stack
+## Stack
 
 `TypeScript` · `Cloudflare Workers` · `SQLite (D1)` · `Chart.js` · `n8n` · `Google Sheets/Drive API` · `Metabase API`
 
-## 📌 Nota
+## Nota
 
 Este repositório contém o código-fonte extraído de um projeto em produção, com identificadores internos (IDs de planilha, tokens, webhooks) removidos/substituídos por placeholders para publicação.
